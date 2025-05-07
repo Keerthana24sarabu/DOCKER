@@ -1,46 +1,29 @@
-from fastapi import FastAPI
-from sqlmodel import Field, Session, SQLModel, create_engine, select
-from config import settings
+from flask import Flask, request, jsonify
 
+app = Flask(__name__)
 
-class Hero(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(index=True)
-    secret_name: str
-    age: int | None = Field(default=None, index=True)
+# Create an object to store data
+data_store = []
 
-
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
-
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-
-app = FastAPI()
-
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-
-
-@app.get("/")
+@app.route("/")
 def hello():
-    return "Hello, Docker!"
+    return "Hello, Docker!???"  # You can add more exclamations here later to test live reload
 
+@app.route("/add", methods=["POST"])
+def add_data():
+    # Get data from the POST request (JSON)
+    data = request.get_json()
 
-@app.post("/heroes/")
-def create_hero(hero: Hero):
-    with Session(engine) as session:
-        session.add(hero)
-        session.commit()
-        session.refresh(hero)
-        return hero
+    # Add data to the data store (list in this case)
+    data_store.append(data)
+    
+    # Respond with the updated list
+    return jsonify({"message": "Data added successfully", "data": data_store}), 201
 
+@app.route("/data", methods=["GET"])
+def get_data():
+    # Return the current data store as a response
+    return jsonify({"data": data_store})
 
-@app.get("/heroes/")
-def read_heroes():
-    with Session(engine) as session:
-        heroes = session.exec(select(Hero)).all()
-        return heroes
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=8001)  # Port 8001 for Docker Compose compatibility
